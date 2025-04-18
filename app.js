@@ -165,13 +165,14 @@ app.post('/login', async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).send('Invalid credentials');
 
-    const token = jwt.sign({ id: user._id }, 'secret_key', { expiresIn: '1h' });
+    const token = jwt.sign({ id: user._id }, 'secret_key', { expiresIn: '30d' });
 
     res.cookie('token', token, {
       httpOnly: true,
       secure: true, // true в проде с https
       sameSite: 'None',
-      maxAge: 360000000 // 1 час
+      maxAge: 3600000000, // 1 час
+      path: '/'
     });
 
     res.json({ message: 'Login successful' });
@@ -184,7 +185,6 @@ app.post('/login', async (req, res) => {
 app.get('/me', async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
-    console.log('/me',user);
     if (!user) return res.status(404).send('User not found');
     res.json(user);
   } catch (err) {
@@ -294,15 +294,44 @@ app.get('/getlastmessage', async (req, res) => {
 
 
 
-app.get('/chat/:id', async (req, res) => {
+// app.get('/chat/:id', async (req, res) => {
+//   try {
+//     const id  = req.params.id;
+//
+//     const [messages, chat] = await Promise.all([
+//       Message.find({ chatId: id }).sort({ createdAt: -1 }).limit(200),
+//       Chat.findById(id),
+//     ]);
+//     res.json({ messages, chat });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).send('Server error');
+//   }
+// });
+
+
+
+app.get('/chat/:id/messages', async (req, res) => {
+  try {
+    let skip = 0
+    if (req.query.skip!='undefined') {
+      skip = +req.query.skip;
+    }
+    const id  = req.params.id;
+
+    const messages = await Message.find({ chatId: id }).sort({ createdAt: -1 }).skip(skip).limit(30)
+    res.json({ messages });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+app.get('/chat/:id/info', async (req, res) => {
   try {
     const id  = req.params.id;
 
-    const [messages, chat] = await Promise.all([
-      Message.find({ chatId: id }).sort({ createdAt: -1 }).limit(200),
-      Chat.findById(id),
-    ]);
-    res.json({ messages, chat });
+    const chat = await Chat.findById(id);
+    res.json({ chat });
   } catch (err) {
     console.error(err);
     res.status(500).send('Server error');
@@ -361,7 +390,6 @@ io.on('connection', (socket) => {
 
 
   socket.on('sendMessage', async ({ chatId, text }) => {
-    console.log(text);
     try {
       const message = new Message({
         content: { text },
@@ -385,8 +413,56 @@ io.on('connection', (socket) => {
     }
   });
 });
+app.post("/logout", (req, res) => {
+  console.log('3980093809')
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    path: "/", // ← обязательно!
+  });
+  res.sendStatus(200);
+});
 
 
+app.post('/editquestions', async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    if (!req.body.questions) {
+      return res.status(400).send('No questions provided');
+    }
+
+    user.questions = req.body.questions;
+    await user.save();
+
+    res.status(201).send({data: 'User questions updated'});
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server error');
+  }
+});
+app.post("/kys", async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(400).send('Invalid user');
+    }
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    await User.findByIdAndDelete(req.user.id);
+    return res.status(200).send('User deleted successfully');
+  } catch (err) {
+    console.error(err);
+    return res.status(500).send('Server error');
+  }
+});
 httpsServer.listen(3001, () => {
   console.log('HTTPS server running on https://localhost:3001');
 });
