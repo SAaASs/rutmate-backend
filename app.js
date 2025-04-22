@@ -94,14 +94,14 @@ const authMiddleware = (req, res, next) => {
   }
   const token = req.cookies.token;
   if (!token) {
-    return res.status(401).send('Authorization required');
+    return res.status(401).send({message: 'Authorization required'});
   }
   try {
     const decoded = jwt.verify(token, 'secret_key');
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(401).send('Invalid token');
+    return res.status(401).send({message: 'Invalid token'});
   }
 };
 
@@ -128,7 +128,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     res.status(201).json({ message: 'File uploaded and linked to user', imageId: image._id });
   } catch (err) {
     console.error('Upload error:', err);
-    res.status(500).send('Upload failed');
+    res.status(500).send({message: 'Upload failed'});
   }
 });
 
@@ -140,7 +140,7 @@ app.get('/image/:id', async (req, res) => {
     res.set('Content-Type', image.contentType);
     res.send(image.data);
   } catch (err) {
-    res.status(500).send('Failed to load image');
+    res.status(500).send({message: 'Failed to load image'});
   }
 });
 
@@ -150,7 +150,7 @@ app.post('/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = new User({ name, lastName, role, questions, email, password: hashedPassword });
     await user.save();
-    res.status(201).send('User registered');
+    res.status(201).send({message: 'User registered'});
   } catch (err) {
     res.status(400).send(err);
   }
@@ -160,10 +160,10 @@ app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).send('User not found');
+    if (!user) return res.status(404).send({message: 'User not found'});
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).send('Invalid credentials');
+    if (!isMatch) return res.status(401).send({message: 'Invalid credentials'});
 
     const token = jwt.sign({ id: user._id }, 'secret_key', { expiresIn: '30d' });
 
@@ -188,27 +188,27 @@ app.get('/me', async (req, res) => {
     if (!user) return res.status(404).send('User not found');
     res.json(user);
   } catch (err) {
-    res.status(401).send('Invalid request');
+    res.status(401).send({message: 'Invalid request'});
   }
 });
 
 app.get('/user/:id', async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
-    if (!user) return res.status(404).send('User not found');
+    if (!user) return res.status(404).send({message: 'User not found'});
     res.json(user);
   } catch (err) {
-    res.status(401).send('Invalid request');
+    res.status(401).send({message: 'Invalid request'});
   }
 });
 
 app.get('/users/all', async (req, res) => {
   try {
     const users = await User.find().select('-password');
-    if (users.length === 0) return res.status(404).send('No users found');
+    if (users.length === 0) return res.status(404).send({message: 'No users found'});
     res.json(users);
   } catch (err) {
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 
@@ -230,7 +230,7 @@ app.get('/checkchat', async (req, res) => {
     res.json(chat._id);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 
@@ -257,12 +257,12 @@ app.get('/mychats', async (req, res) => {
     ]);
 
     if (chats.length===0) {
-     res.send({'message': 'Вы ни с кем не общаетесь, пока что'});
+     res.send({message: 'Вы ни с кем не общаетесь, пока что'});
     }
     res.json(chats);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 
@@ -288,7 +288,7 @@ app.get('/getlastmessage', async (req, res) => {
     res.json(formattedMessage);
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 
@@ -323,7 +323,7 @@ app.get('/chat/:id/messages', async (req, res) => {
     res.json({ messages });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 app.get('/chat/:id/info', async (req, res) => {
@@ -334,7 +334,7 @@ app.get('/chat/:id/info', async (req, res) => {
     res.json({ chat });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 
@@ -429,11 +429,11 @@ app.post('/editquestions', async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).send('User not found');
+      return res.status(404).send({message: 'User not found'});
     }
 
     if (!req.body.questions) {
-      return res.status(400).send('No questions provided');
+      return res.status(400).send({message: 'No questions provided'});
     }
 
     user.questions = req.body.questions;
@@ -442,27 +442,53 @@ app.post('/editquestions', async (req, res) => {
     res.status(201).send({data: 'User questions updated'});
   } catch (err) {
     console.error(err);
-    res.status(500).send('Server error');
+    res.status(500).send({message: 'Server error'});
   }
 });
 app.post("/kys", async (req, res) => {
   try {
     if (!req.user || !req.user.id) {
-      return res.status(400).send('Invalid user');
+      return res.status(400).send({message: 'Invalid user'});
     }
 
     const user = await User.findById(req.user.id);
     if (!user) {
-      return res.status(404).send('User not found');
+      return res.status(404).send({message: 'User not found'});
     }
 
     await User.findByIdAndDelete(req.user.id);
-    return res.status(200).send('User deleted successfully');
+    return res.status(200).send({message: 'User deleted successfully'});
   } catch (err) {
     console.error(err);
-    return res.status(500).send('Server error');
+    return res.status(500).send({message: 'Server error'});
   }
 });
+
+
+app.post('/users/filtered', async (req, res) => {
+  try {
+    const filterFields = req.body; // Пример: { age: "18-25", gender: "Мужской" }
+
+    const mongoQuery = {};
+
+    for (const key in filterFields) {
+      if (filterFields[key]) {
+        mongoQuery[`questions.${key}`] = filterFields[key];
+      }
+    }
+    console.log(mongoQuery)
+    const users = await User.find(mongoQuery).select('-password');
+
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: 'Server error' });
+  }
+});
+
+
+
+
 httpsServer.listen(3001, () => {
   console.log('HTTPS server running on https://localhost:3001');
 });
