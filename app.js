@@ -20,7 +20,7 @@ const credentials = { key: privateKey, cert: certificate };
 const app = express();
 app.use(bodyParser.json());
 app.use(cors({
-  origin: ['http://localhost:4200', 'http://127.0.0.1:4200'], // фронт должен быть на этом порту
+  origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://89.169.174.180:4200', 'https://89.169.174.180:4200'], // фронт должен быть на этом порту
   credentials: true,
 }));
 app.use(cookieParser());
