@@ -18,13 +18,14 @@ const privateKey = fs.readFileSync('./certs/key.pem', 'utf8');
 const certificate = fs.readFileSync('./certs/cert.pem', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 const app = express();
-app.use(bodyParser.json());
+const httpsServer = https.createServer(credentials, app);
+
 app.use(cors({
   origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://89.169.174.180:4200', 'https://89.169.174.180:4200'], // фронт должен быть на этом порту
   credentials: true,
 }));
-app.use(cookieParser());
-const httpsServer = https.createServer(credentials, app);
+
+
 const io = new Server(httpsServer, {
   cors: {
     origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://89.169.174.180:4200', 'https://89.169.174.180:4200'],
@@ -33,8 +34,8 @@ const io = new Server(httpsServer, {
 });
 
 
-
-
+app.use(cookieParser());
+app.use(bodyParser.json());
 mongoose.connect('mongodb://localhost:27017/userdb', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
