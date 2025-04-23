@@ -27,11 +27,10 @@ app.use(cookieParser());
 const httpsServer = https.createServer(credentials, app);
 const io = new Server(httpsServer, {
   cors: {
-    origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
+    origin: ['http://localhost:4200', 'http://127.0.0.1:4200', 'http://89.169.174.180:4200', 'https://89.169.174.180:4200'],
     credentials: true
   }
 });
-
 
 
 
